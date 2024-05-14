@@ -19,6 +19,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
 CHECK_INTERVAL = 60  # Check every minute
+MAX_ATTACHMENT_SIZE = 6 * 1024 * 1024  # 6 MB
 
 class FolderMonitor:
     def __init__(self, directory, email, password):
@@ -37,26 +38,43 @@ class FolderMonitor:
             msg.attach(MIMEText(message, 'plain'))
 
             if attachment_paths:
+                total_size = 0
                 for attachment_path in attachment_paths:
                     if attachment_path and os.path.exists(attachment_path):
+                        file_size = os.path.getsize(attachment_path)
+                        if total_size + file_size > MAX_ATTACHMENT_SIZE:
+                            # Send current email and start a new one
+                            with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+                                server.login(email, password)
+                                server.sendmail(email, email, msg.as_string())
+                            logging.info(f"Email sent successfully with subject: {subject} and current attachments.")
+                            msg = MIMEMultipart()
+                            msg['From'] = email
+                            msg['To'] = email
+                            msg['Subject'] = subject
+                            msg.attach(MIMEText(message, 'plain'))
+                            total_size = 0
+                        total_size += file_size
                         with open(attachment_path, "rb") as attachment:
                             part = MIMEBase('application', 'octet-stream')
                             part.set_payload(attachment.read())
                             encoders.encode_base64(part)
                             part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
                             msg.attach(part)
+                            logging.info(f"Attached file: {attachment_path}")
 
+            # Send the final email
             with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
                 server.login(email, password)
                 server.sendmail(email, email, msg.as_string())
-
-            logging.info(f"Email sent successfully with subject: {subject}")
+            logging.info(f"Email sent successfully with subject: {subject} and remaining attachments.")
 
             # Delete the files after sending
             if attachment_paths:
                 for attachment_path in attachment_paths:
                     if os.path.exists(attachment_path):
                         os.remove(attachment_path)
+                        logging.info(f"Deleted file: {attachment_path}")
 
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
