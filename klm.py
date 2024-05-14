@@ -26,7 +26,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'keylogger.log'),
                     level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
 SEND_REPORT_EVERY = 90  # as in seconds
