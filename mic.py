@@ -10,7 +10,7 @@ output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 MICROPHONE_DURATION = 60  # 30 seconds for testing, adjust as needed
-MAX_ATTACHMENT_SIZE = 7 * 1024 * 1024  # 7 MB
+MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 7 MB
 lock_path = os.path.join(log_directory, "audio_record.lock")
 
 def acquire_lock():
