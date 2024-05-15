@@ -44,7 +44,7 @@ def record_audio():
         logging.error(f"Failed to record audio: {e}")
 
 def split_audio_file(audio_path):
-    chunk_size = MAX_ATTACHMENT_SIZE - 1024 * 1024  # Less than max to ensure room for more parts
+    chunk_size = MAX_ATTACHMENT_SIZE  # Max size per chunk
     with wave.open(audio_path, 'rb') as wf:
         params = wf.getparams()
         total_frames = wf.getnframes()
