@@ -30,62 +30,55 @@ class FolderMonitor:
 
     def send_mail(self, email, password, subject, message, attachment_paths=None):
         try:
-            attachment_paths = [path for path in attachment_paths if os.path.exists(path)]
-            attachment_paths.sort(key=os.path.getsize)  # Sort files by size to handle smaller files first
+            total_sent = 0
+            current_msg = MIMEMultipart()
+            current_msg['From'] = email
+            current_msg['To'] = email
+            current_msg['Subject'] = subject
+            current_msg.attach(MIMEText(message, 'plain'))
 
-            initial_paths = list(attachment_paths)  # Keep an original list for deletion purposes
+            if attachment_paths:
+                attachment_paths.sort(key=os.path.getsize, reverse=True)  # Start with largest file to manage space
 
-            while attachment_paths:
-                current_msg = MIMEMultipart()
-                current_msg['From'] = email
-                current_msg['To'] = email
-                current_msg['Subject'] = subject + " (continued)"
-                current_msg.attach(MIMEText(message, 'plain'))
+                for attachment_path in attachment_paths:
+                    if os.path.exists(attachment_path):
+                        file_size = os.path.getsize(attachment_path)
+                        # Check if adding this file would exceed the limit
+                        if total_sent + file_size > MAX_ATTACHMENT_SIZE:
+                            # Send current message before adding more attachments
+                            self.smtp_send(email, password, current_msg)
+                            total_sent = 0  # Reset counter after sending
+                            current_msg = MIMEMultipart()  # Start new message
+                            current_msg['From'] = email
+                            current_msg['To'] = email
+                            current_msg['Subject'] = subject
+                            current_msg.attach(MIMEText(message, 'plain'))
 
-                total_size = 0
-                attachments_in_this_email = []
-
-                for attachment_path in list(attachment_paths):  # Iterate a copy of the list
-                    file_size = os.path.getsize(attachment_path)
-                    if total_size + file_size <= MAX_ATTACHMENT_SIZE:
                         with open(attachment_path, "rb") as attachment:
                             part = MIMEBase('application', 'octet-stream')
                             part.set_payload(attachment.read())
                             encoders.encode_base64(part)
                             part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
                             current_msg.attach(part)
-                            logging.info(f"Attached file: {attachment_path}")
-                            total_size += file_size
-                            attachments_in_this_email.append(attachment_path)
-                        attachment_paths.remove(attachment_path)
-                    else:
-                        break
-                    
-                # Send the current batch
-                with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
-                    server.login(email, password)
-                    server.sendmail(email, email, current_msg.as_string())
-                logging.info("Email sent successfully with some attachments.")
+                            total_sent += file_size
 
-                # Delete the files from this batch after sending
-                for attachment_path in attachments_in_this_email:
-                    try:
+                if total_sent > 0:  # There's still content to send
+                    self.smtp_send(email, password, current_msg)
+
+                # Only delete files if they were added to a successful email
+                for attachment_path in attachment_paths:
+                    if os.path.exists(attachment_path):
                         os.remove(attachment_path)
                         logging.info(f"Deleted file: {attachment_path}")
-                    except Exception as e:
-                        logging.error(f"Failed to delete file {attachment_path}: {e}")
 
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
 
-        # Attempt to clean up any remaining undeleted files
-        for attachment_path in initial_paths:
-            if os.path.exists(attachment_path):
-                try:
-                    os.remove(attachment_path)
-                    logging.info(f"Deleted file: {attachment_path}")
-                except Exception as e:
-                    logging.error(f"Failed to delete file {attachment_path}: {e}")
+    def smtp_send(self, email, password, msg):
+        with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+            server.login(email, password)
+            server.sendmail(email, email, msg.as_string())
+        logging.info("Email sent successfully with attachments.")
 
     def check_folder(self):
         while True:
