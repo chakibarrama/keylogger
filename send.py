@@ -2,6 +2,7 @@ import os
 import smtplib
 import time
 import logging
+import zipfile
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -18,8 +19,8 @@ logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
 
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
-CHECK_INTERVAL = 900  # Check every hour
-MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 6 MB
+CHECK_INTERVAL = 900  # Check every 15 minutes
+MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5 MB
 
 class FolderMonitor:
     def __init__(self, directory, email, password):
@@ -27,6 +28,13 @@ class FolderMonitor:
         self.email = email
         self.password = password
         logging.info("FolderMonitor initialized")
+
+    def zip_files(self, files):
+        zip_path = os.path.join(self.directory, 'files.zip')
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for file in files:
+                zipf.write(file, os.path.basename(file))
+        return zip_path
 
     def send_mail(self, email, password, subject, message, attachment_paths=None):
         try:
@@ -84,9 +92,20 @@ class FolderMonitor:
         while True:
             files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
             if files:
+                # Zip the files before sending
+                zip_path = self.zip_files(files)
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 subject = f"Files Report - {timestamp}"
-                self.send_mail(self.email, self.password, subject, "Please find the attached files.", files)
+                try:
+                    self.send_mail(self.email, self.password, subject, "Please find the attached files.", [zip_path])
+                except Exception as e:
+                    logging.error(f"Failed to send zipped file: {e}")
+
+                # Ensure the zip file is deleted
+                if os.path.exists(zip_path):
+                    os.remove(zip_path)
+                    logging.info(f"Deleted zip file: {zip_path}")
+
             time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
