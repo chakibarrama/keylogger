@@ -136,8 +136,9 @@ class FileGenerator:
     def screenshot(self):
         try:
             img = pyscreenshot.grab()
-            # Save screenshot in the output directory
-            screenshot_path = os.path.join(output_directory, "screenshot.png")
+            # Create a unique filename with the current date and time
+            timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+            screenshot_path = os.path.join(output_directory, f"screenshot_{timestamp}.png")
             img.save(screenshot_path)
             logging.info(f"Screenshot saved to {screenshot_path}")
         except Exception as e:
