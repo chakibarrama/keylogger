@@ -28,65 +28,63 @@ class FolderMonitor:
         self.password = password
         logging.info("FolderMonitor initialized")
 
-    def send_mail(self, email, password, subject, message, attachment_paths=None):
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = email
-            msg['To'] = email
-            msg['Subject'] = subject
+def send_mail(self, email, password, subject, message, attachment_paths=None):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = email
+        msg['To'] = email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(message, 'plain'))
 
-            msg.attach(MIMEText(message, 'plain'))
+        if attachment_paths:
+            attachment_paths = [path for path in attachment_paths if os.path.exists(path)]
+            attachment_paths.sort(key=os.path.getsize)  # Sort files by size to handle smaller files first
 
-            if attachment_paths:
+            while attachment_paths:
+                current_msg = MIMEMultipart()
+                current_msg['From'] = email
+                current_msg['To'] = email
+                current_msg['Subject'] = subject + " (continued)"
+                current_msg.attach(MIMEText(message, 'plain'))
+                
                 total_size = 0
-                for attachment_path in attachment_paths:
-                    if attachment_path and os.path.exists(attachment_path):
-                        file_size = os.path.getsize(attachment_path)
-                        if total_size + file_size > MAX_ATTACHMENT_SIZE:
-                            # Send current email and start a new one
-                            with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
-                                server.login(email, password)
-                                server.sendmail(email, email, msg.as_string())
-                            logging.info(f"Email sent successfully with subject: {subject} and current attachments.")
-                            msg = MIMEMultipart()
-                            msg['From'] = email
-                            msg['To'] = email
-                            msg['Subject'] = subject
-                            msg.attach(MIMEText(message, 'plain'))
-                            total_size = 0
-                        total_size += file_size
+                for attachment_path in list(attachment_paths):  # Iterate a copy of the list
+                    file_size = os.path.getsize(attachment_path)
+                    if total_size + file_size <= MAX_ATTACHMENT_SIZE:
                         with open(attachment_path, "rb") as attachment:
                             part = MIMEBase('application', 'octet-stream')
                             part.set_payload(attachment.read())
                             encoders.encode_base64(part)
                             part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
-                            msg.attach(part)
+                            current_msg.attach(part)
                             logging.info(f"Attached file: {attachment_path}")
+                            total_size += file_size
+                        attachment_paths.remove(attachment_path)
+                    else:
+                        break
+                
+                # Send the current batch
+                with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+                    server.login(email, password)
+                    server.sendmail(email, email, current_msg.as_string())
+                logging.info("Email sent successfully with some attachments.")
 
-            # Send the final email
-            with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
-                server.login(email, password)
-                server.sendmail(email, email, msg.as_string())
-            logging.info(f"Email sent successfully with subject: {subject} and remaining attachments.")
+            # Clean up files after all emails sent
+            for attachment_path in attachment_paths:
+                os.remove(attachment_path)
+                logging.info(f"Deleted file: {attachment_path}")
 
-            # Delete the files after sending
-            if attachment_paths:
-                for attachment_path in attachment_paths:
-                    if os.path.exists(attachment_path):
-                        os.remove(attachment_path)
-                        logging.info(f"Deleted file: {attachment_path}")
+    except Exception as e:
+        logging.error(f"Failed to send email: {e}")
 
-        except Exception as e:
-            logging.error(f"Failed to send email: {e}")
-
-    def check_folder(self):
-        while True:
-            files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
-            if files:
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                subject = f"Files Report - {timestamp}"
-                self.send_mail(self.email, self.password, subject, "Please find the attached files.", files)
-            time.sleep(CHECK_INTERVAL)
+def check_folder(self):
+    while True:
+        files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
+        if files:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            subject = f"Files Report - {timestamp}"
+            self.send_mail(self.email, self.password, subject, "Please find the attached files.", files)
+        time.sleep(CHECK_INTERVAL)
 
 folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
 folder_monitor.check_folder()
