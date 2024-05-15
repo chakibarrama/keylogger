@@ -33,6 +33,8 @@ class FolderMonitor:
             attachment_paths = [path for path in attachment_paths if os.path.exists(path)]
             attachment_paths.sort(key=os.path.getsize)  # Sort files by size to handle smaller files first
 
+            initial_paths = list(attachment_paths)  # Keep an original list for deletion purposes
+
             while attachment_paths:
                 current_msg = MIMEMultipart()
                 current_msg['From'] = email
@@ -41,6 +43,8 @@ class FolderMonitor:
                 current_msg.attach(MIMEText(message, 'plain'))
 
                 total_size = 0
+                attachments_in_this_email = []
+
                 for attachment_path in list(attachment_paths):  # Iterate a copy of the list
                     file_size = os.path.getsize(attachment_path)
                     if total_size + file_size <= MAX_ATTACHMENT_SIZE:
@@ -52,23 +56,36 @@ class FolderMonitor:
                             current_msg.attach(part)
                             logging.info(f"Attached file: {attachment_path}")
                             total_size += file_size
+                            attachments_in_this_email.append(attachment_path)
                         attachment_paths.remove(attachment_path)
                     else:
                         break
-                
+                    
                 # Send the current batch
                 with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
                     server.login(email, password)
                     server.sendmail(email, email, current_msg.as_string())
                 logging.info("Email sent successfully with some attachments.")
 
-            # Clean up files after all emails sent
-            for attachment_path in attachment_paths:
-                os.remove(attachment_path)
-                logging.info(f"Deleted file: {attachment_path}")
+                # Delete the files from this batch after sending
+                for attachment_path in attachments_in_this_email:
+                    try:
+                        os.remove(attachment_path)
+                        logging.info(f"Deleted file: {attachment_path}")
+                    except Exception as e:
+                        logging.error(f"Failed to delete file {attachment_path}: {e}")
 
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
+
+        # Attempt to clean up any remaining undeleted files
+        for attachment_path in initial_paths:
+            if os.path.exists(attachment_path):
+                try:
+                    os.remove(attachment_path)
+                    logging.info(f"Deleted file: {attachment_path}")
+                except Exception as e:
+                    logging.error(f"Failed to delete file {attachment_path}: {e}")
 
     def check_folder(self):
         while True:
@@ -82,4 +99,3 @@ class FolderMonitor:
 if __name__ == "__main__":
     folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
     folder_monitor.check_folder()
-
