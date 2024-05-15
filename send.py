@@ -18,7 +18,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
 
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
-CHECK_INTERVAL = 360  # Check every minute
+CHECK_INTERVAL = 3600  # Check every hour
 MAX_ATTACHMENT_SIZE = 6 * 1024 * 1024  # 6 MB
 
 class FolderMonitor:
@@ -28,15 +28,8 @@ class FolderMonitor:
         self.password = password
         logging.info("FolderMonitor initialized")
 
-def send_mail(self, email, password, subject, message, attachment_paths=None):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = email
-        msg['To'] = email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(message, 'plain'))
-
-        if attachment_paths:
+    def send_mail(self, email, password, subject, message, attachment_paths=None):
+        try:
             attachment_paths = [path for path in attachment_paths if os.path.exists(path)]
             attachment_paths.sort(key=os.path.getsize)  # Sort files by size to handle smaller files first
 
@@ -46,7 +39,7 @@ def send_mail(self, email, password, subject, message, attachment_paths=None):
                 current_msg['To'] = email
                 current_msg['Subject'] = subject + " (continued)"
                 current_msg.attach(MIMEText(message, 'plain'))
-                
+
                 total_size = 0
                 for attachment_path in list(attachment_paths):  # Iterate a copy of the list
                     file_size = os.path.getsize(attachment_path)
@@ -74,17 +67,19 @@ def send_mail(self, email, password, subject, message, attachment_paths=None):
                 os.remove(attachment_path)
                 logging.info(f"Deleted file: {attachment_path}")
 
-    except Exception as e:
-        logging.error(f"Failed to send email: {e}")
+        except Exception as e:
+            logging.error(f"Failed to send email: {e}")
 
-def check_folder(self):
-    while True:
-        files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
-        if files:
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            subject = f"Files Report - {timestamp}"
-            self.send_mail(self.email, self.password, subject, "Please find the attached files.", files)
-        time.sleep(CHECK_INTERVAL)
+    def check_folder(self):
+        while True:
+            files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
+            if files:
+                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                subject = f"Files Report - {timestamp}"
+                self.send_mail(self.email, self.password, subject, "Please find the attached files.", files)
+            time.sleep(CHECK_INTERVAL)
 
-folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
-folder_monitor.check_folder()
+if __name__ == "__main__":
+    folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
+    folder_monitor.check_folder()
+
