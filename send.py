@@ -29,58 +29,55 @@ class FolderMonitor:
         self.password = password
         logging.info("FolderMonitor initialized")
 
-    def zip_files(self, files):
-        zip_path = os.path.join(self.directory, 'files.zip')
+    def zip_file(self, file_path):
+        zip_path = file_path + '.zip'
         with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for file in files:
-                zipf.write(file, os.path.basename(file))
+            zipf.write(file_path, os.path.basename(file_path))
+        os.remove(file_path)  # Delete the original file after zipping
+        logging.info(f"Deleted original file: {file_path}")
         return zip_path
 
     def send_mail(self, email, password, subject, message, attachment_paths=None):
-        try:
-            total_sent = 0
-            current_msg = MIMEMultipart()
-            current_msg['From'] = email
-            current_msg['To'] = email
-            current_msg['Subject'] = subject
-            current_msg.attach(MIMEText(message, 'plain'))
+        total_sent = 0
+        current_msg = MIMEMultipart()
+        current_msg['From'] = email
+        current_msg['To'] = email
+        current_msg['Subject'] = subject
+        current_msg.attach(MIMEText(message, 'plain'))
 
-            if attachment_paths:
-                attachment_paths.sort(key=os.path.getsize, reverse=True)  # Start with largest file to manage space
+        if attachment_paths:
+            attachment_paths.sort(key=os.path.getsize, reverse=True)  # Start with largest file to manage space
 
-                for attachment_path in attachment_paths:
-                    if os.path.exists(attachment_path):
-                        file_size = os.path.getsize(attachment_path)
-                        # Check if adding this file would exceed the limit
-                        if total_sent + file_size > MAX_ATTACHMENT_SIZE:
-                            # Send current message before adding more attachments
-                            self.smtp_send(email, password, current_msg)
-                            total_sent = 0  # Reset counter after sending
-                            current_msg = MIMEMultipart()  # Start new message
-                            current_msg['From'] = email
-                            current_msg['To'] = email
-                            current_msg['Subject'] = subject
-                            current_msg.attach(MIMEText(message, 'plain'))
+            for attachment_path in attachment_paths:
+                if os.path.exists(attachment_path):
+                    file_size = os.path.getsize(attachment_path)
+                    # Check if adding this file would exceed the limit
+                    if total_sent + file_size > MAX_ATTACHMENT_SIZE:
+                        # Send current message before adding more attachments
+                        self.smtp_send(email, password, current_msg)
+                        total_sent = 0  # Reset counter after sending
+                        current_msg = MIMEMultipart()  # Start new message
+                        current_msg['From'] = email
+                        current_msg['To'] = email
+                        current_msg['Subject'] = subject
+                        current_msg.attach(MIMEText(message, 'plain'))
 
-                        with open(attachment_path, "rb") as attachment:
-                            part = MIMEBase('application', 'octet-stream')
-                            part.set_payload(attachment.read())
-                            encoders.encode_base64(part)
-                            part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
-                            current_msg.attach(part)
-                            total_sent += file_size
+                    with open(attachment_path, "rb") as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(attachment_path)}")
+                        current_msg.attach(part)
+                        total_sent += file_size
 
-                if total_sent > 0:  # There's still content to send
-                    self.smtp_send(email, password, current_msg)
+            if total_sent > 0:  # There's still content to send
+                self.smtp_send(email, password, current_msg)
 
-                # Only delete files if they were added to a successful email
-                for attachment_path in attachment_paths:
-                    if os.path.exists(attachment_path):
-                        os.remove(attachment_path)
-                        logging.info(f"Deleted file: {attachment_path}")
-
-        except Exception as e:
-            logging.error(f"Failed to send email: {e}")
+            # Only delete files if they were added to a successful email
+            for attachment_path in attachment_paths:
+                if os.path.exists(attachment_path):
+                    os.remove(attachment_path)
+                    logging.info(f"Deleted zip file: {attachment_path}")
 
     def smtp_send(self, email, password, msg):
         with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
@@ -92,19 +89,20 @@ class FolderMonitor:
         while True:
             files = [os.path.join(self.directory, f) for f in os.listdir(self.directory) if os.path.isfile(os.path.join(self.directory, f))]
             if files:
-                # Zip the files before sending
-                zip_path = self.zip_files(files)
+                zipped_files = []
+                for file in files:
+                    try:
+                        zip_path = self.zip_file(file)
+                        zipped_files.append(zip_path)
+                    except Exception as e:
+                        logging.error(f"Failed to zip file {file}: {e}")
+
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 subject = f"Files Report - {timestamp}"
                 try:
-                    self.send_mail(self.email, self.password, subject, "Please find the attached files.", [zip_path])
+                    self.send_mail(self.email, self.password, subject, "Please find the attached files.", zipped_files)
                 except Exception as e:
-                    logging.error(f"Failed to send zipped file: {e}")
-
-                # Ensure the zip file is deleted
-                if os.path.exists(zip_path):
-                    os.remove(zip_path)
-                    logging.info(f"Deleted zip file: {zip_path}")
+                    logging.error(f"Failed to send zipped files: {e}")
 
             time.sleep(CHECK_INTERVAL)
 
