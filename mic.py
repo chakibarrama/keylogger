@@ -60,7 +60,9 @@ def split_audio_file(audio_path):
                 frames = wf.readframes(frames_per_chunk)
                 chunk_wf.writeframes(frames)
             logging.info(f"Created audio chunk: {chunk_path} with size: {os.path.getsize(chunk_path)} bytes")
-        os.remove(audio_path)  # Delete the original file after splitting
+        
+    os.remove(audio_path)  # Delete the original file after splitting
+    logging.info(f"Deleted original file: {audio_path}")
 
 def schedule_recording():
     record_audio()
