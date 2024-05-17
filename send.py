@@ -121,6 +121,7 @@ class FolderMonitor:
                             logging.info(f"File {zip_path} exceeds 5MB and will be ignored.")
                         else:
                         zipped_files.append(zip_path)
+                            logging.info(f"Zipped file: {file} to {zip_path}")
                     except Exception as e:
                         logging.error(f"Failed to zip file {file}: {e}")
 
@@ -128,6 +129,7 @@ class FolderMonitor:
                 subject = f"Files Report - {timestamp}"
                 try:
                     self.send_mail(self.email, self.password, subject, "Please find the attached files.", zipped_files)
+                    logging.info(f"Email with subject '{subject}' sent.")
                 except Exception as e:
                     logging.error(f"Failed to send zipped files: {e}")
 
