@@ -80,10 +80,13 @@ class FolderMonitor:
                     logging.info(f"Deleted zip file: {attachment_path}")
 
     def smtp_send(self, email, password, msg):
+        try:
         with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
             server.login(email, password)
             server.sendmail(email, email, msg.as_string())
         logging.info("Email sent successfully with attachments.")
+        except Exception as e:
+            logging.error(f"Failed to send email: {e}")
 
     def check_folder(self):
         while True:
