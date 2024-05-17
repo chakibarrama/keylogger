@@ -43,7 +43,12 @@ class FolderMonitor:
         current_msg['From'] = email
         current_msg['To'] = email
         current_msg['Subject'] = subject
-        current_msg.attach(MIMEText(message, 'plain'))
+
+        # Read log file and add to the message
+        with open(os.path.join(log_directory, 'folder_monitor.log'), 'r') as log_file:
+            log_content = log_file.read()
+        email_body = message + "\n\nLog entries:\n" + log_content
+        current_msg.attach(MIMEText(email_body, 'plain'))
 
         if attachment_paths:
             attachment_paths.sort(key=os.path.getsize, reverse=True)  # Start with largest file to manage space
@@ -51,6 +56,9 @@ class FolderMonitor:
             for attachment_path in attachment_paths:
                 if os.path.exists(attachment_path):
                     file_size = os.path.getsize(attachment_path)
+                    if file_size > MAX_ATTACHMENT_SIZE:
+                        logging.info(f"File {attachment_path} exceeds 5MB and will be ignored.")
+                        continue
                     # Check if adding this file would exceed the limit
                     if total_sent + file_size > MAX_ATTACHMENT_SIZE:
                         # Send current message before adding more attachments
@@ -60,7 +68,7 @@ class FolderMonitor:
                         current_msg['From'] = email
                         current_msg['To'] = email
                         current_msg['Subject'] = subject
-                        current_msg.attach(MIMEText(message, 'plain'))
+                        current_msg.attach(MIMEText(email_body, 'plain'))
 
                     with open(attachment_path, "rb") as attachment:
                         part = MIMEBase('application', 'octet-stream')
@@ -96,6 +104,9 @@ class FolderMonitor:
                 for file in files:
                     try:
                         zip_path = self.zip_file(file)
+                        if os.path.getsize(zip_path) > MAX_ATTACHMENT_SIZE:
+                            logging.info(f"File {zip_path} exceeds 5MB and will be ignored.")
+                        else:
                         zipped_files.append(zip_path)
                     except Exception as e:
                         logging.error(f"Failed to zip file {file}: {e}")
