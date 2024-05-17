@@ -37,6 +37,15 @@ class FolderMonitor:
         logging.info(f"Deleted original file: {file_path}")
         return zip_path
 
+    def get_folder_contents(self):
+        contents = "Output folder contents:\n"
+        for f in os.listdir(self.directory):
+            file_path = os.path.join(self.directory, f)
+            if os.path.isfile(file_path):
+                file_size = os.path.getsize(file_path)
+                contents += f"{f} - {file_size / (1024 * 1024):.2f} MB\n"
+        return contents
+
     def send_mail(self, email, password, subject, message, attachment_paths=None):
         total_sent = 0
         current_msg = MIMEMultipart()
@@ -47,7 +56,11 @@ class FolderMonitor:
         # Read log file and add to the message
         with open(os.path.join(log_directory, 'folder_monitor.log'), 'r') as log_file:
             log_content = log_file.read()
-        email_body = message + "\n\nLog entries:\n" + log_content
+
+        # Get folder contents and add to the message
+        folder_contents = self.get_folder_contents()
+
+        email_body = message + "\n\nLog entries:\n" + log_content + "\n\n" + folder_contents
         current_msg.attach(MIMEText(email_body, 'plain'))
 
         if attachment_paths:
