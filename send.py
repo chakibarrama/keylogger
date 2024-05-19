@@ -137,4 +137,8 @@ class FolderMonitor:
 
 if __name__ == "__main__":
     folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
+    # Send initial email indicating script has started
+    initial_subject = "Folder Monitor Script Started"
+    initial_message = "The folder monitor script has started successfully."
+    folder_monitor.send_mail(EMAIL_ADDRESS, EMAIL_PASSWORD, initial_subject, initial_message)
     folder_monitor.check_folder()
