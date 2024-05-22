@@ -144,9 +144,27 @@ class FolderMonitor:
 
 if __name__ == "__main__":
     try:
+        # Send initial email indicating script has started
+        initial_subject = "Script Started"
+        initial_message = "The folder monitor script has started successfully."
+
+        initial_msg = MIMEMultipart()
+        initial_msg['From'] = EMAIL_ADDRESS
+        initial_msg['To'] = EMAIL_ADDRESS
+        initial_msg['Subject'] = initial_subject
+        initial_msg.attach(MIMEText(initial_message, 'plain'))
+
+        try:
+            with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+                server.sendmail(EMAIL_ADDRESS, EMAIL_ADDRESS, initial_msg.as_string())
+            logging.info("Initial email sent successfully.")
+        except Exception as e:
+            logging.error(f"Failed to send initial email: {e}")
+
         folder_monitor = FolderMonitor(output_directory, EMAIL_ADDRESS, EMAIL_PASSWORD)
         # Send initial email indicating script has started with folder contents
-        initial_subject = "start script"
+        initial_subject = "Start Script"
         initial_message = "The folder monitor script has started successfully.\n\n" + folder_monitor.get_folder_contents()
         folder_monitor.send_mail(EMAIL_ADDRESS, EMAIL_PASSWORD, initial_subject, initial_message)
         folder_monitor.check_folder()
