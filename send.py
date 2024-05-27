@@ -31,6 +31,10 @@ class FolderMonitor:
 
     def zip_file(self, file_path):
         try:
+            if file_path.endswith('.zip'):
+                logging.info(f"File {file_path} is already zipped, skipping.")
+                return file_path
+
             zip_path = file_path + '.zip'
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 zipf.write(file_path, os.path.basename(file_path))
@@ -78,7 +82,7 @@ class FolderMonitor:
                     if os.path.exists(attachment_path):
                         file_size = os.path.getsize(attachment_path)
                         if file_size > MAX_ATTACHMENT_SIZE:
-                            logging.info(f"File {attachment_path} exceeds 5MB and will be ignored.")
+                            logging.info(f"File {attachment_path} exceeds 4MB and will be ignored.")
                             continue
                         # Check if adding this file would exceed the limit
                         if total_sent + file_size > MAX_ATTACHMENT_SIZE:
@@ -131,7 +135,7 @@ class FolderMonitor:
                             zipped_files.append(zip_path)
                             logging.info(f"Zipped file: {file} to {zip_path}")
                         else:
-                            logging.info(f"File {file} exceeds 5MB and will be ignored.")
+                            logging.info(f"File {file} exceeds 4MB and will be ignored.")
 
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                     subject = f"Files Report - {timestamp}"
