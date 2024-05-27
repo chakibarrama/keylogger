@@ -70,7 +70,7 @@ class FolderMonitor:
                     part_data = f.read(MAX_ATTACHMENT_SIZE)
                     if not part_data:
                         break
-                    part_path = f"{file_path}.part{part_num}"
+                    part_path = f"{file_path}.prt{part_num}"
                     with open(part_path, 'wb') as part_file:
                         part_file.write(part_data)
                     parts.append(part_path)
