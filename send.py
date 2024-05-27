@@ -57,6 +57,29 @@ class FolderMonitor:
             logging.error(f"Failed to get folder contents: {e}")
         return contents
 
+    def split_file(self, file_path):
+        parts = []
+        try:
+            file_size = os.path.getsize(file_path)
+            if file_size <= MAX_ATTACHMENT_SIZE:
+                return [file_path]
+
+            part_num = 1
+            with open(file_path, 'rb') as f:
+                while True:
+                    part_data = f.read(MAX_ATTACHMENT_SIZE)
+                    if not part_data:
+                        break
+                    part_path = f"{file_path}.part{part_num}"
+                    with open(part_path, 'wb') as part_file:
+                        part_file.write(part_data)
+                    parts.append(part_path)
+                    part_num += 1
+            os.remove(file_path)  # Remove the original file after splitting
+        except Exception as e:
+            logging.error(f"Failed to split file {file_path}: {e}")
+        return parts
+
     def send_mail(self, email, password, subject, message, attachment_paths=None):
         total_sent = 0
         current_msg = MIMEMultipart()
@@ -131,11 +154,13 @@ class FolderMonitor:
                     zipped_files = []
                     for file in files:
                         zip_path = self.zip_file(file)
-                        if zip_path and os.path.getsize(zip_path) <= MAX_ATTACHMENT_SIZE:
-                            zipped_files.append(zip_path)
-                            logging.info(f"Zipped file: {file} to {zip_path}")
-                        else:
-                            logging.info(f"File {file} exceeds 4MB and will be ignored.")
+                        if zip_path:
+                            if os.path.getsize(zip_path) <= MAX_ATTACHMENT_SIZE:
+                                zipped_files.append(zip_path)
+                                logging.info(f"Zipped file: {file} to {zip_path}")
+                            else:
+                                split_files = self.split_file(zip_path)
+                                zipped_files.extend(split_files)
 
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                     subject = f"Files Report - {timestamp}"
