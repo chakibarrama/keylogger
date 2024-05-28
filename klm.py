@@ -10,9 +10,28 @@ from pynput import keyboard
 from pynput.keyboard import Listener
 import threading
 
+# Function to install a package using pip
+def install_package(package_name):
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+        logging.info(f"Package {package_name} installed successfully.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to install package {package_name}: {e}")
+        sys.exit(1)
+
+# Ensure sounddevice is installed
+try:
+    import sounddevice as sd
+except ImportError:
+    install_package("sounddevice")
+    import sounddevice as sd
+
+
 # Shared settings
 output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
+os.makedirs(output_directory, exist_ok=True)
+os.makedirs(log_directory, exist_ok=True)
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def check_if_already_running():
