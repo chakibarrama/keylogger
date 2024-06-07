@@ -19,7 +19,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
 
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
-CHECK_INTERVAL = 300  # Check every 5 minutes
+CHECK_INTERVAL = 180  # Check every 5 minutes
 MAX_ATTACHMENT_SIZE = 4 * 1024 * 1024  # 4 MB
 
 class FolderMonitor:
