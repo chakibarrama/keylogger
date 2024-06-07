@@ -13,9 +13,19 @@ log_directory = "C:\\Windows\\klm\\logs"
 output_directory = "C:\\Windows\\klm\\output"
 os.makedirs(log_directory, exist_ok=True)
 os.makedirs(output_directory, exist_ok=True)
+
+# Folder Monitor Log
 logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
                     level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
+
+# File Generation Log
+file_generation_log_path = os.path.join(log_directory, 'file_generation.log')
+file_generation_logger = logging.getLogger('file_generation_logger')
+file_generation_logger.setLevel(logging.INFO)
+file_generation_handler = logging.FileHandler(file_generation_log_path)
+file_generation_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+file_generation_logger.addHandler(file_generation_handler)
 
 EMAIL_ADDRESS = "071bfafc4dde91"
 EMAIL_PASSWORD = "9918ecc6a25877"
@@ -40,6 +50,7 @@ class FolderMonitor:
                 zipf.write(file_path, os.path.basename(file_path))
             os.remove(file_path)  # Delete the original file after zipping
             logging.info(f"Deleted original file: {file_path}")
+            file_generation_logger.info(f"Generated zip file: {zip_path}")
             return zip_path
         except Exception as e:
             logging.error(f"Failed to zip file {file_path}: {e}")
@@ -88,14 +99,18 @@ class FolderMonitor:
         current_msg['Subject'] = subject
 
         try:
-            # Read log file and add to the message
+            # Read log files and add to the message
             with open(os.path.join(log_directory, 'folder_monitor.log'), 'r') as log_file:
-                log_content = log_file.read()
+                folder_monitor_log_content = log_file.read()
+            with open(file_generation_log_path, 'r') as file_gen_log_file:
+                file_generation_log_content = file_gen_log_file.read()
 
             # Get folder contents and add to the message
             folder_contents = self.get_folder_contents()
 
-            email_body = message + "\n\nLog entries:\n" + log_content + "\n\n" + folder_contents
+            email_body = (message + "\n\nLog entries from folder_monitor.log:\n" + folder_monitor_log_content +
+                          "\n\nLog entries from file_generation.log:\n" + file_generation_log_content +
+                          "\n\n" + folder_contents)
             current_msg.attach(MIMEText(email_body, 'plain'))
 
             if attachment_paths:
@@ -134,6 +149,13 @@ class FolderMonitor:
                     if os.path.exists(attachment_path):
                         os.remove(attachment_path)
                         logging.info(f"Deleted zip file: {attachment_path}")
+
+            # Clear the log files after sending the email
+            with open(os.path.join(log_directory, 'folder_monitor.log'), 'w'):
+                pass
+            with open(file_generation_log_path, 'w'):
+                pass
+            logging.info("Log files cleared after sending email.")
         except Exception as e:
             logging.error(f"Failed to prepare email: {e}")
 
