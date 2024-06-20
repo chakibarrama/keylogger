@@ -114,13 +114,15 @@ class FolderMonitor:
             current_msg.attach(MIMEText(email_body, 'plain'))
 
             if attachment_paths:
+                unsent_files = []
                 attachment_paths.sort(key=os.path.getsize, reverse=True)  # Start with largest file to manage space
 
                 for attachment_path in attachment_paths:
                     if os.path.exists(attachment_path):
                         file_size = os.path.getsize(attachment_path)
                         if file_size > MAX_ATTACHMENT_SIZE:
-                            logging.info(f"File {attachment_path} exceeds 4MB and will be ignored.")
+                            logging.info(f"File {attachment_path} exceeds 4MB and will be skipped.")
+                            unsent_files.append(attachment_path)
                             continue
                         # Check if adding this file would exceed the limit
                         if total_sent + file_size > MAX_ATTACHMENT_SIZE:
@@ -146,7 +148,7 @@ class FolderMonitor:
 
                 # Only delete files if they were added to a successful email
                 for attachment_path in attachment_paths:
-                    if os.path.exists(attachment_path):
+                    if os.path.exists(attachment_path) and attachment_path not in unsent_files:
                         os.remove(attachment_path)
                         logging.info(f"Deleted zip file: {attachment_path}")
 
