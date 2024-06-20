@@ -70,7 +70,7 @@ def split_audio_file(audio_path):
 
 def schedule_recording():
     record_audio()
-    threading.Timer(1200, schedule_recording).start()  # Schedule next recording in 20 minutes
+    threading.Timer(1100, schedule_recording).start()  # Schedule next recording in 20 minutes
 
 if __name__ == "__main__":
     schedule_recording()
