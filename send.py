@@ -15,9 +15,7 @@ os.makedirs(log_directory, exist_ok=True)
 os.makedirs(output_directory, exist_ok=True)
 
 # Folder Monitor Log
-logging.basicConfig(filename=os.path.join(log_directory, 'folder_monitor.log'),
-                    level=logging.DEBUG,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', encoding='utf-8')
 
 # File Generation Log
 file_generation_log_path = os.path.join(log_directory, 'file_generation.log')

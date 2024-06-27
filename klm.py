@@ -33,7 +33,7 @@ output_directory = "C:\\Windows\\klm\\output"
 log_directory = "C:\\Windows\\klm\\logs"
 os.makedirs(output_directory, exist_ok=True)
 os.makedirs(log_directory, exist_ok=True)
-logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename=os.path.join(log_directory, 'file_generation.log'), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', encoding='utf-8')
 
 def check_if_already_running():
     current_script = os.path.basename(__file__)  # Gets the name of the current script
