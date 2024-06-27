@@ -186,10 +186,11 @@ class FolderMonitor:
                                 split_files = self.split_file(zip_path)
                                 zipped_files.extend(split_files)
 
-                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                    subject = f"Files Report - {timestamp}"
-                    self.send_mail(self.email, self.password, subject, "Log of recent actions and file status:", zipped_files)
-                    logging.info(f"Email with subject '{subject}' sent.")
+                    if zipped_files:  # Ensure there are files to send
+                        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                        subject = f"Files Report - {timestamp}"
+                        self.send_mail(self.email, self.password, subject, "Log of recent actions and file status:", zipped_files)
+                        logging.info(f"Email with subject '{subject}' sent.")
             except Exception as e:
                 logging.error(f"Error during folder check: {e}")
 
