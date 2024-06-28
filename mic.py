@@ -19,7 +19,7 @@ logging.basicConfig(
     format=f'{log_prefix}%(asctime)s - %(levelname)s - %(message)s',
     encoding='utf-8'
 )
-MICROPHONE_DURATION = 500  # Duration of recording in seconds
+MICROPHONE_DURATION = 1000  # Duration of recording in seconds
 MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # Max size for an attachment
 
 def record_audio():
